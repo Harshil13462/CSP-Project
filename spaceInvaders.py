@@ -20,17 +20,17 @@ SHOOT = pygame.mixer.Sound("mixkit-video-game-retro-click-237.wav")
 pygame.mixer.music.load('music.wav')
 pygame.mixer.music.play(-1)
 HIT = pygame.mixer.Sound("mixkit-fast-game-explosion-1688.wav")
+HIT.set_volume(0.3)
 
 
 BULLET_LENGTH = 5
-BULLET_HEIGHT = 5
+BULLET_HEIGHT = 15
 DEFENDER_HEIGHT = 25
-DEFENDER_LENGTH = 75
+DEFENDER_LENGTH = 150
 
-LEFT = -0.3
-RIGHT = 0.3
+SPEED = 0.3
 
-variables = [RIGHT]
+variables = [SPEED]
 bullets = []
 invaders = []
 
@@ -67,7 +67,7 @@ class Bullet(pygame.sprite.Sprite):
 			self.y += self.speed
 			if type(self.target) == list:
 				for i in self.target:
-					if self.x > i.x - BULLET_LENGTH and self.x < i.x + DEFENDER_LENGTH and self.y + BULLET_HEIGHT > i.y and self.y < i.y + DEFENDER_HEIGHT:
+					if self.x > i.x - BULLET_LENGTH and self.x < i.x + INVADER_LENGTH and self.y + BULLET_HEIGHT > i.y and self.y < i.y + INVADER_HEIGHT:
 						pygame.mixer.Sound.play(HIT)
 						return i
 			else:
