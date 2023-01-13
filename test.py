@@ -214,6 +214,7 @@ while running:
 			gameOver = True
 			pygame.mixer.Sound.play(LOSE)
 			continue
+		
 	for i in bullets:
 		x = i.update()
 		if x:
