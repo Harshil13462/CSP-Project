@@ -34,6 +34,12 @@ def createBullet(x, y, screen, team):
 		target = player
 	bullets.append(Bullet(x, y, screen, target))
 
+def resetInvaders():
+	for i in range(10):
+		for j in range(6):
+			invaders.append(Invader(30 + i * (INVADER_GAP + INVADER_LENGTH), 0 + j * (INVADER_GAP + INVADER_HEIGHT), screen, variables))
+
+
 class Bullet(pygame.sprite.Sprite):
 	def __init__(self, x, y, screen, target):
 		super(Bullet, self).__init__()
@@ -44,22 +50,23 @@ class Bullet(pygame.sprite.Sprite):
 		self.speed = 2
 		self.surf = pygame.Surface((BULLET_LENGTH, BULLET_HEIGHT))
 		self.surf.fill((255, 0, 0))
-		if self.target == 1:
+		if type(self.target) == list:
 			self.speed = -2
     
 	def update(self):
-		self.y += self.speed
 		if self.y < 0 or self.y > HEIGHT:
-			bullets.remove(self)
-			del self
-		if type(self.target) == list:
-			pass
+			return 1
 		else:
-			if self.x > self.target.x - BULLET_LENGTH and self.x < self.target.x + DEFENDER_LENGTH + BULLET_LENGTH and self.y > self.target.y - BULLET_HEIGHT and self.y < self.target.y + BULLET_HEIGHT:
-				self.target.x.lives -= 1
-				# bullets.remove(self)
-				del self
-		self.screen.blit(self.surf, (self.x, self.y))
+			self.y += self.speed
+			if type(self.target) == list:
+				for i in self.target:
+					if self.x > i.x - BULLET_LENGTH and self.x < i.x + DEFENDER_LENGTH and self.y + BULLET_HEIGHT > i.y and self.y < i.y + DEFENDER_HEIGHT:
+						return i
+			else:
+				if self.x > self.target.x - BULLET_LENGTH and self.x < self.target.x + DEFENDER_LENGTH and self.y + BULLET_HEIGHT > self.target.y and self.y < self.target.y + DEFENDER_HEIGHT:
+					self.target.lives -= 1
+					return 1
+			self.screen.blit(self.surf, (self.x, self.y))
 
 class Character(pygame.sprite.Sprite):
 	def __init__(self, x, y, screen, lives):
@@ -89,7 +96,7 @@ class Invader(Character):
 		self.screen.blit(self.surf, (self.x, self.y))
 
 		if random.randint(1, 1000) == 1:
-			createBullet(self.x, self.y, self.screen, self.team)
+			createBullet(self.x + INVADER_LENGTH / 2, self.y + INVADER_HEIGHT, self.screen, self.team)
 
 	def shoot(self):
 		pass
@@ -100,6 +107,7 @@ class Defender(Character):
 		self.team = 1
 		self.surf = pygame.Surface((DEFENDER_LENGTH, DEFENDER_HEIGHT))
 		self.surf.fill((255, 255, 255))
+		self.time = -1
 	def update(self, pressed_keys):
 		if pressed_keys[K_LEFT]:
 			self.x = self.x - 5
@@ -109,44 +117,116 @@ class Defender(Character):
 			self.x = self.x + 5
 			if self.x > WIDTH - DEFENDER_LENGTH:
 				self.x = WIDTH - DEFENDER_LENGTH
+		if pressed_keys[K_SPACE] and time.time() - self.time > 0.5:
+			createBullet(self.x + DEFENDER_LENGTH / 2, self.y + DEFENDER_HEIGHT - BULLET_HEIGHT, self.screen, self.team)
+			self.time = time.time()
 		self.screen.blit(self.surf, (self.x, self.y))
-
-class Shield(pygame.sprite.Sprite):
-	def __init__(self, screen):
-		super(Shield, self).__init__()
 
 pygame.init()
 
 fps = 60
 fpsClock = pygame.time.Clock()
-pygame.display.set_caption("Space Invaders")
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Space Invaders")
 running = True
+score = 0
+font = pygame.font.Font('freesansbold.ttf', 32)
 player = Defender(30, 800, screen)
-for i in range(10):
-	for j in range(6):
-		invaders.append(Invader(30 + i * (INVADER_GAP + INVADER_LENGTH), 0 + j * (INVADER_GAP + INVADER_HEIGHT), screen, variables))
+gameOver = False
+f = open("highScore.txt", "r")
+highScore = f.readline()
+f.close()
+newHighScore = False
 while running:
 	screen.fill((0, 0, 0))
-	pressed_keys = pygame.key.get_pressed()
-	for i in invaders:
-		i.update()
-	for i in bullets:
-		i.update()
-	player.update(pressed_keys)
 	for event in pygame.event.get():
 		if event.type == pygame.KEYDOWN:
 			if event.key == K_ESCAPE:
 				running = False
+			# if event.key == K_TAB:
+			# 	fps = 240
+			# else:
+			# 	fps = 60
+			if event.key == K_r and gameOver:
+				gameOver = False
+				score = 0
+				newHighScore = False
+				invaders = []
+				bullets = []
+				player = Defender(30, 800, screen)
 		if event.type == pygame.QUIT:
 			running = False
+	if gameOver:
+		if score > int(highScore):
+			f = open("highScore.txt", "w")
+			newHighScore = True
+			f.write(str(score))
+			highScore = score
+			f.close()
+		gameOverText = font.render(f'Game Over', True, (255, 0, 0))
+		gameOverTextRect = gameOverText.get_rect()
+		gameOverTextRect.center = (WIDTH / 2, HEIGHT / 2 - 80)
+		screen.blit(gameOverText, gameOverTextRect)
+
+		playAgainText = font.render(f'Press R to restart', True, (255, 0, 0))
+		playAgainTextRect = playAgainText.get_rect()
+		playAgainTextRect.center = (WIDTH / 2, HEIGHT / 2 - 40)
+		screen.blit(playAgainText, playAgainTextRect)
+
+		scoreText = font.render(f'Score: {score}', True, (0, 0, 255))
+		scoreTextRect = scoreText.get_rect()
+		scoreTextRect.center = (WIDTH / 2, HEIGHT / 2)
+		screen.blit(scoreText, scoreTextRect)
+
+		highScoreText = font.render(f'High Score: {highScore}', True, (0, 0, 255))
+		highScoreTextRect = highScoreText.get_rect()
+		highScoreTextRect.center = (WIDTH / 2, HEIGHT / 2 + 40)
+		screen.blit(highScoreText, highScoreTextRect)
+
+		closeText = font.render(f'Press Escape to Quit', True, (0, 0, 255))
+		closeTextRect = closeText.get_rect()
+		closeTextRect.center = (WIDTH / 2, HEIGHT / 2 + 80)
+		screen.blit(closeText, closeTextRect)
+
+		pygame.display.flip()
+		fpsClock.tick(fps)
+		continue
+
+
+	if len(invaders) == 0:
+		resetInvaders()
+	pressed_keys = pygame.key.get_pressed()
+	for i in invaders:
+		i.update()
+	for i in bullets:
+		x = i.update()
+		if x:
+			bullets.remove(i)
+		if type(x) == Invader:
+			invaders.remove(x)
+			score += 10
+	scoreText = font.render(f'Score: {score}', True, (0, 0, 255))
+	livesText = font.render(f'Lives: {player.lives}', True, (0, 0, 255))
+	scoreTextRect = scoreText.get_rect()
+	livesTextRect = livesText.get_rect()
+	scoreTextRect.midleft = (20, 25)
+	livesTextRect.midright = (1060, 25)
+	screen.blit(scoreText, scoreTextRect)
+	screen.blit(livesText, livesTextRect)
+	if score > int(highScore):
+		highScoreText = font.render(f'High Score: {score}', True, (0, 0, 255))
+	else:
+		highScoreText = font.render(f'High Score: {highScore}', True, (0, 0, 255))
+	highScoreTextRect = highScoreText.get_rect()
+	highScoreTextRect.center = (WIDTH / 2, 25)
+	screen.blit(highScoreText, highScoreTextRect)
+
+	if player.lives == 0:
+		gameOver = True
+	player.update(pressed_keys)
 
 	pygame.display.flip()
 	fpsClock.tick(fps)
 
 pygame.quit()
 sys.exit()
-screen = pygame.display.set_mode([500, 500])
-running = True
-
-pygame.quit()
