@@ -44,7 +44,7 @@ def createBullet(x, y, screen, team):
 def resetInvaders():
 	for i in range(10):
 		for j in range(6):
-			invaders.append(Invader(30 + i * (INVADER_GAP + INVADER_LENGTH), 0 + j * (INVADER_GAP + INVADER_HEIGHT), screen, variables))
+			invaders.append(Invader(30 + i * (INVADER_GAP + INVADER_LENGTH), 75 + j * (INVADER_GAP + INVADER_HEIGHT), screen, variables))
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -78,23 +78,22 @@ class Bullet(pygame.sprite.Sprite):
 			self.screen.blit(self.surf, (self.x, self.y))
 
 class Character(pygame.sprite.Sprite):
-	def __init__(self, x, y, screen, lives):
+	def __init__(self, x, y, screen):
 		super(Character, self).__init__()
 		self.x = x
 		self.y = y
 		self.screen = screen
-		self.lives = lives
 
 class Invader(Character):
 	def __init__(self, x, y, screen, variables):
-		super().__init__(x, y, screen, 1)
+		super().__init__(x, y, screen)
 		self.team = 2
 		self.img = pygame.image.load("invader.jpg")
 		self.img = pygame.transform.rotozoom(self.img, 0, 0.25)
 		# self.surf = pygame.Surface((INVADER_LENGTH, INVADER_HEIGHT))
 		# self.surf.fill((255, 255, 255))
 		self.variables = variables
-		self.prev = 1
+		self.prev = 0.3
     
 	def update(self, level):
 		if self.prev != variables[0]:
@@ -112,9 +111,22 @@ class Invader(Character):
 		if random.randint(1, 10000) <= level:
 			createBullet(self.x + INVADER_LENGTH / 2, self.y + INVADER_HEIGHT, self.screen, self.team)
 
+class SuperInvader(Character):
+	def __init__(self, screen):
+		super().__init__(-50, 30, screen)
+		self.team = 2
+		self.img = pygame.image.load("UFO.png")
+		self.img = pygame.transform.rotozoom(self.img, 0, 0.25)
+	def update(self, level):
+		self.x = self.x + 1
+		self.screen.blit(self.img, (self.x, self.y))
+		if self.x > WIDTH:
+			return 1
+
 class Defender(Character):
 	def __init__(self, x, y, screen):
-		super().__init__(x, y, screen, 3)
+		super().__init__(x, y, screen)
+		self.lives = 3
 		self.team = 1
 		self.surf = pygame.Surface((DEFENDER_LENGTH, DEFENDER_HEIGHT))
 		self.surf.fill((255, 255, 255))
@@ -128,7 +140,7 @@ class Defender(Character):
 			self.x = self.x + 5
 			if self.x > WIDTH - DEFENDER_LENGTH:
 				self.x = WIDTH - DEFENDER_LENGTH
-		if pressed_keys[K_SPACE] and time.time() - self.time > 0.4:
+		if pressed_keys[K_SPACE] and time.time() - self.time > 0.5:
 			pygame.mixer.Sound.play(SHOOT)
 			createBullet(self.x + DEFENDER_LENGTH / 2, self.y + DEFENDER_HEIGHT - BULLET_HEIGHT, self.screen, self.team)
 			self.time = time.time()
@@ -152,6 +164,7 @@ if not highScore:
 	highScore = 0
 f.close()
 newHighScore = False
+lastUFO = time.time()
 while running:
 	screen.fill((0, 0, 0))
 	for event in pygame.event.get():
@@ -206,8 +219,11 @@ while running:
 
 	if len(invaders) == 0:
 		resetInvaders()
+	if random.randint(1, 1000) == 1 and time.time() - lastUFO > 10:
+		invaders.append(SuperInvader(screen))
+		lastUFO = time.time()
 	pressed_keys = pygame.key.get_pressed()
-	level = min([15, score // 20 + 1])
+	level = min([score // 100 + 1])
 	for i in invaders:
 		if i.update(level) == 1:
 			lives = 0
@@ -222,6 +238,9 @@ while running:
 		if type(x) == Invader:
 			invaders.remove(x)
 			score += 10
+		elif type(x) == SuperInvader:
+			invaders.remove(x)
+			score += 100
 	scoreText = font.render(f'Score: {score}', True, (0, 0, 255))
 	livesText = font.render(f'Lives: {player.lives}', True, (0, 0, 255))
 	scoreTextRect = scoreText.get_rect()
